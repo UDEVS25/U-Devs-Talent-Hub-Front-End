@@ -1,99 +1,58 @@
-import { lazy, Suspense, useEffect } from 'react';
-/// Components
-import Index from './jsx/index';
-import { connect, useDispatch } from 'react-redux';
-import { Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
-// action
-import {
-    checkAutoLogin,
-    // isLogin 
-} from './services/AuthService';
-import { isAuthenticated } from './store/selectors/AuthSelectors';
-/// Style
-import './assets/vendor/swiper/css/swiper-bundle.min.css';
-import "./assets/vendor/bootstrap-select/dist/css/bootstrap-select.min.css";
-import "./assets/css/style.css";
+import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
+import Navbar from './components/Navbar';
+import ProtectedRoute from './components/ProtectedRoute';
+import AuthPage from './pages/AuthPage';
+import Dashboard from './pages/Dashboard';
+import Jobs from './pages/Jobs';
+import Applicants from './pages/Applicants';
+import Hosting from './pages/Hosting';
 
-const SignUp = lazy(() => import('./jsx/pages/Registration'));
-const Login = lazy(() => {
-    return new Promise(resolve => {
-        setTimeout(() => resolve(import('./jsx/pages/Login')), 500);
-    });
-});
+import './assets/global.css';
 
-function withRouter(Component) {
-    function ComponentWithRouterProp(props) {
-        let location = useLocation();
-        let navigate = useNavigate();
-        let params = useParams();
+export default function App() {
+  const [dark, setDark] = useState(true);
 
-        return (
-            <Component
-                {...props}
-                router={{ location, navigate, params }}
-            />
-        );
-    }
+  useEffect(() => {
+    document.body.classList.toggle('light', !dark);
+  }, [dark]);
 
-    return ComponentWithRouterProp;
-}
+  const toggle = () => setDark(d => !d);
 
-function App(props) {
-    const dispatch = useDispatch();
-    const navigate = useNavigate();
-    useEffect(() => {
-        checkAutoLogin(dispatch, navigate);
-    }, []);
+  return (
+    <>
+      <Routes>
+        {/* Auth route — no navbar overlay needed (AuthPage renders its own) */}
+        <Route path="/login" element={<AuthPage dark={dark} onToggleDark={toggle} />} />
 
-    let routeblog = (
-        <Routes>
-            <Route path='/login' element={<Login />} />
-            <Route path='/page-register' element={<SignUp />} />
-        </Routes>
-    );
-    if (props.isAuthenticated) {
-        return (
+        {/* Protected routes — shared navbar */}
+        <Route path="/*" element={
+          <ProtectedRoute>
             <>
-                <Suspense fallback={
-                    <div id="preloader">
-                        <div className="sk-three-bounce">
-                            <div className="sk-child sk-bounce1"></div>
-                            <div className="sk-child sk-bounce2"></div>
-                            <div className="sk-child sk-bounce3"></div>
-                        </div>
-                    </div>
-                }
-                >
-                    <Index />
-                </Suspense>
+              <Navbar dark={dark} onToggleDark={toggle} />
+              <Routes>
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="jobs" element={<Jobs />} />
+                <Route path="applicants" element={<Applicants />} />
+                <Route path="hosting" element={<Hosting />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
             </>
-        );
+          </ProtectedRoute>
+        } />
 
-    } else {
-        return (
-            <div className="vh-100">
-                <Suspense fallback={
-                    <div id="preloader">
-                        <div className="sk-three-bounce">
-                            <div className="sk-child sk-bounce1"></div>
-                            <div className="sk-child sk-bounce2"></div>
-                            <div className="sk-child sk-bounce3"></div>
-                        </div>
-                    </div>
-                }
-                >
-                    {routeblog}
-                </Suspense>
-            </div>
-        );
-    }
-};
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
 
-const mapStateToProps = (state) => {
-    return {
-        isAuthenticated: isAuthenticated(state),
-    };
-};
-
-export default withRouter(connect(mapStateToProps)(App)); 
+      <ToastContainer
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar
+        theme="dark"
+      />
+    </>
+  );
+}
